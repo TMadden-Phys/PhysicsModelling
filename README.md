@@ -1,1 +1,1 @@
-A repository containing my coding projects at university and small projects that I have started and/or completed.
+Welcome to my collection of coding projects, both academic and personal. This repository includes various projects that I have started or completed during my university courses, as well as independent work developed in my own time. 
