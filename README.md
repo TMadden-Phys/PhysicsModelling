@@ -1,1 +1,1 @@
-Welcome to my collection of coding projects, both academic and personal. This repository includes various projects that I have started or completed during my university courses, as well as independent work developed in my own time. 
+Welcome to my collection of academic coding projects.
