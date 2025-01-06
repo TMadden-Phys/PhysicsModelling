@@ -32,15 +32,21 @@ class EllipticCrossSection(DiskCrossSection):
 
 
 class AccretionDisk:
-    def __init__(self, cross_section_class, rotation_divisions, tilt_angle):
+    def __init__(self, cross_section_class, rotation_divisions, tilt_angle, disperse = True):
         self.rotation_divisions = rotation_divisions
         self.tilt_angle = tilt_angle
         self.remapped_cross_section = np.stack(
             (cross_section_class.cross_section[0],
              np.zeros_like(cross_section_class.cross_section[0]),
              cross_section_class.cross_section[1]), axis = -1)
-        self.disk = AD.volume_revolution(self.remapped_cross_section, rotation_divisions, tilt_angle = tilt_angle)
-    
+        self.disk = AD.zsurface_revolution(self.remapped_cross_section, rotation_divisions)
+
+        if disperse:
+            # disperse the points slightly
+            AD.generate_random_dispersion(self.disk, np.uint32(rotation_divisions))
+        #tilt the disk
+        AD.tilt_disk(self.disk, tilt_angle)
+
     def plot_disk(self):
         fig = plt.figure()
         ax = fig.add_subplot(projection = '3d')
@@ -50,12 +56,15 @@ class AccretionDisk:
 
 class DiskProjection:
     def __init__(self, AccretionDisk: AccretionDisk, observer_polar_angle, observer_azim_angle, plane_divisions):
-        self.disk = AccretionDisk.disk; self.observer_theta = observer_polar_angle; self.observer_azim = observer_azim_angle; self.plane_divisions = plane_divisions
-        self.observer_ray = np.array(
+        self.disk = AccretionDisk.disk; self.observer_theta = np.pi/2 + observer_polar_angle; self.observer_azim = observer_azim_angle; self.plane_divisions = plane_divisions
+        
+        self.pseudoObserverRay = np.array(
                     (np.cos(self.observer_azim)*np.sin(self.observer_theta),
                     np.sin(self.observer_azim)*np.sin(self.observer_theta),
                     np.cos(self.observer_theta)))
-        self.ortho_vectors = np.stack(
+        # these ortho vectors are only used for the accretion disk generation
+        # they must map back to the observer ortho vectors in order
+        self.pseudoOrthogonalVectors = np.stack(
             (np.array((-np.sin(self.observer_azim), np.cos(self.observer_azim), 0)),
              np.array((np.cos(self.observer_azim)*np.cos(self.observer_theta), np.sin(self.observer_azim)*np.cos(self.observer_theta), -np.sin(self.observer_theta)))))
         self.cartesian_lines = self.gen_planardivisions()
@@ -63,8 +72,8 @@ class DiskProjection:
     
     def gen_projection(self):
         ring_filtered = self.disk.reshape(self.disk.shape[0]*self.disk.shape[1], self.disk.shape[2])
-        ring_filtered2 = ring_filtered[np.dot(ring_filtered, self.observer_ray) > 0]
-        point_cloud = np.round(planar_map(ring_filtered2, *self.ortho_vectors), 7)
+        ring_filtered2 = ring_filtered[np.dot(ring_filtered, self.pseudoObserverRay) > 0]
+        point_cloud = np.round(planar_map(ring_filtered2, *self.pseudoOrthogonalVectors), 7)
         indexes = AD.split_convhull(point_cloud, self.cartesian_lines)
         ordered_indexes = AD.reorder_convex_hull(point_cloud, indexes)
         return point_cloud, ordered_indexes, AD.gen_argmax(point_cloud, ordered_indexes)

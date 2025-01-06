@@ -1,4 +1,4 @@
-import numpy as np; import pandas as pd; import time
+import numpy as np; import pandas as pd; import time; import os
 import matplotlib.pyplot as plt
 from . import SpreadClasses as Spreads
 from . import AccretionDiskClasses as AccClass
@@ -89,8 +89,9 @@ class GeneralSim:
         ortho_vecs = np.zeros((system_rotation_angles.shape[0], 2 , 3))
         for i in range(system_rotation_angles.shape[0]):
             system_rotation = LinAlg.general_rotation(*system_rot_axis, system_rotation_angles[i])
-            ortho_vecs[i,0] = system_rotation @ LinAlg.general_rotation(*system_rot_axis, observer_rot_angles[i]) @ np.array((0,0,1))
-            ortho_vecs[i,1] = system_rotation @ LinAlg.general_rotation(*system_rot_axis, observer_rot_angles[i]) @ np.array((0,1,0))
+            ## these ortho vectors are to follow the oberserver ray around the path of the neutron star
+            ortho_vecs[i,0] = system_rotation @ LinAlg.general_rotation(*system_rot_axis, observer_rot_angles[i]) @ np.array((0,1,0))
+            ortho_vecs[i,1] = system_rotation @ LinAlg.general_rotation(*system_rot_axis, observer_rot_angles[i]) @ np.array((0,0,1))
         return ortho_vecs
     
     def gen_params(self, NeutronStarClass):
@@ -142,9 +143,9 @@ class CombineSim:
             if value is not None:
                 full_param_dict.append(value.gen_params(*[self.ClassesDict[j] for j in inspect.getfullargspec(value.gen_params)[0] if j != 'self']))
         full_param_dict = reduce(lambda d1, d2: d1|d2, full_param_dict)
-        flux_params = [full_param_dict[i] for i in self.flux_func.params]
+        flux_params = tuple(full_param_dict[i] for i in self.flux_func.params)
         if self.flow_func is not None:
-            flow_params = [full_param_dict[i] for i in self.flow_func.params]
+            flow_params = tuple(full_param_dict[i] for i in self.flow_func.params)
         else:
             flow_params = None
         return full_param_dict, flow_params, flux_params
@@ -162,6 +163,7 @@ class CombineSim:
             if i*all_params['dt'] > all_params['rise_time']:
                 self.flow_func.adjust_flow(self.FlowClassDict['CoolSpreadClass'], *flow_params, temperature = np.uint16(0))
             self.flux_func.calc_hemisphere_flux(*flux_params, out = all_params['result'][i])
+            # i think the problem is in the rotations
             LinAlg.rotate_vector(all_params['rotation_array'], all_params['observer_vectors'])
             LinAlg.rotate_vector(all_params['rotation_array'], all_params['ortho_vectors'][:,0])
             LinAlg.rotate_vector(all_params['rotation_array'], all_params['ortho_vectors'][:,1])
@@ -179,8 +181,8 @@ class CombineSim:
 
 def save_data(permutations, temperatures, timesteps, save_dir, save_name):
     indexes = pd.MultiIndex.from_arrays((np.round(permutations, 7)),names = ['flash position', 'observer position'])
-    df = pd.DataFrame(np.round(temperatures,7), index = indexes, columns=np.round(timesteps, 7))
-    df.to_csv('{}\{}.csv'.format(save_dir, save_name))
+    df = pd.DataFrame(np.round(temperatures.T,7), index = indexes, columns=np.round(timesteps, 7))
+    df.to_csv(os.path.join(save_dir, save_name + '.csv'))
 
 def RunEverything(
     NS_Hz, angle_divisions, dt,

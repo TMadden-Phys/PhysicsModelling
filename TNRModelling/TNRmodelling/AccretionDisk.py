@@ -1,7 +1,23 @@
 import numpy as np; import numba as nb; import math; from scipy.spatial import ConvexHull; import matplotlib.pyplot as plt
 
 @nb.njit
-def volume_revolution(coords, slices, tilt_angle = 0):
+def tilt_disk(surface_points, tilt_angle):
+    assert surface_points.ndim == 3, "surface points should be a 3D array"
+
+    # tilt of the surface about the y axis.
+    tilt_matrix = np.array(((np.cos(tilt_angle), 0 , -np.sin(tilt_angle)), (0,1,0), (np.sin(tilt_angle), 0, np.cos(tilt_angle))))
+
+    # perform the tilting of the surface about y axis
+    for i in range(surface_points.shape[0]):
+        for j in range(surface_points.shape[1]):
+            for k in range(surface_points.shape[2]):
+                tmp = 0
+                for m in range(surface_points.shape[2]):
+                    tmp += tilt_matrix[k,m] * surface_points[i,j,m]
+                surface_points[i,j,k] = tmp
+
+@nb.njit
+def zsurface_revolution(coords, slices):
     '''
     Returns an angled surface of revolution from a 2D slice of the surface.
     '''
@@ -12,22 +28,21 @@ def volume_revolution(coords, slices, tilt_angle = 0):
     r0 = np.array(((np.cos(theta),-np.sin(theta)),(np.sin(theta), np.cos(theta)))); rotation = r0.copy(); rot_temp = np.zeros_like(r0)
     jx, jy = r0.shape
 
-    # tilt of the surface about the y axis.
-    tilt_matrix = np.array(((np.cos(tilt_angle), 0 , -np.sin(tilt_angle)), (0,1,0), (np.sin(tilt_angle), 0, np.cos(tilt_angle))))
+    # setup the output array
+    surface_points = np.zeros((slices, ix, iy))
 
-    # generates the surface of revolution
-    template = np.zeros((slices, ix, iy))
+    # generates the surface of revolution about the z axis
     for i in range(slices):
         # generates all of the successive rotations about the axis
         # could refactor to just multiply the angle and form the array from that
         for j in range(jx):
             for k in range(jy):
-
                 tmp = 0
                 for m in range(jy):
                     tmp += r0[j,m]*rotation[m,k]
-                
                 rot_temp[j,k] = tmp
+        
+        # this is innefficient surely?? Why is it here?
         rotation = rot_temp.copy()
 
         # perform the rotation about the z axis
@@ -37,19 +52,41 @@ def volume_revolution(coords, slices, tilt_angle = 0):
                     tmp = 0
                     for m in range(2):
                         tmp += rotation[k,m]*coords[j,m]
-                    template[i,j,k] = tmp
+                    surface_points[i,j,k] = tmp
                 else:
-                    template[i,j,k] = coords[j,k]
+                    surface_points[i,j,k] = coords[j,k]
+    return surface_points
 
-    # perform the tilting of the surface about y axis
-    for i in range(slices):
-        for j in range(ix):
-            for k in range(iy):
-                tmp = 0
-                for m in range(iy):
-                    tmp += tilt_matrix[k,m] * template[i,j,m]
-                template[i,j,k] = tmp
-    return template
+@nb.njit('(f8[:,:,:], u4)',parallel = True)
+def generate_random_dispersion(surface_points, rotation_divisions):
+    '''
+    Disperses the points on the accretion disk surface slightly to more accurately define the accretion disk.
+    '''
+    # generate absolute of the closed interval of the angular resolution
+    abs_interval = (2 * np.pi) / rotation_divisions
+    # we don't need to go half the angular resolution as the random numbers will be generated on the closed interval [-0.5, 0.5]
+
+    # the surface of revolution is initially generated about the z axis -> we can do the dispersion step between the generation and tilting
+    # rotation around the z axis
+    ix , iy, iz = surface_points.shape
+    for rotation_slice in nb.prange(ix):
+        for loop_point in range(iy):
+            rand_dispersion = (0.5 - np.random.rand()) * abs_interval
+            
+            cs = math.cos(rand_dispersion)
+            sn = math.sin(rand_dispersion)
+
+            dispersion_rotation = np.array(((cs, -sn),
+                                            (sn, cs)))
+
+            tmp = np.empty(2)
+            for i in range(2):
+                tmp[i] = 0
+                for j in range(2):
+                    tmp[i] += dispersion_rotation[i, j] * surface_points[rotation_slice, loop_point, j]
+            
+            for i in range(2):
+                surface_points[rotation_slice, loop_point, i] = tmp[i]
 
 @nb.njit('f8[:,:](f8[:,:],f8[:,:])')
 def split_points(point_cloud, lines):

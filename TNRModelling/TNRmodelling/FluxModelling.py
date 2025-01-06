@@ -8,6 +8,7 @@ def calc_point_flux(area_const, sine_theta, temp, cosine_angle):
     '''
     Calculates the flux from a point on a surface to an observer
     '''
+    # * cosine_angle
     return area_const * sine_theta * temp * cosine_angle
 
 @nb.njit('f8(f8[:], u2[:,:], f8[:], f8, b1[:])')
@@ -50,31 +51,58 @@ class BaseFlux:
             hemisphere_mask = calc_hemisphere_points(inner_prod[i])
             out[i] = calc_surface_flux(inner_prod[i], temps, sin_thetas, const, hemisphere_mask)
 
-# @nb.njit('(f8[:,:,:], f8[:,:], f8[:,:], f8[:,:],f8[:,:,:], f8[:,:], u2[:,:], f8[:], f8, f8[:])', parallel = False)
-def calc_disk_flux(ortho_vectors, sphere_vectors, disk_projection, convex_idx, hull_extrema, inner_prod: np.float64, temps: np.uint16, sin_thetas: np.float64, const: np.float64, out: np.float64):
+@nb.njit('(f8[:,:,:], f8[:,:], f8[:,:], f8[:,:],f8[:,:,:], f8[:,:], u2[:,:], f8[:], f8, f8[:])', parallel = False)
+def calc_disk_fluxOLD(ortho_vectors, sphere_vectors, disk_projection, convex_idx, hull_extrema, inner_prod: np.float64, temps: np.uint16, sin_thetas: np.float64, const: np.float64, out: np.float64):
     '''
     Calculates the flux from the sphere's surface, first filters to see if the points lie on the same hemisphere as the observer ray, then also checks if the points are blocked by the disk.
     '''
     ix, iy = temps.shape
     jx = inner_prod.shape[0]
     for i in nb.prange(jx):
-        
         hemisphere_mask = calc_hemisphere_points(inner_prod[i])
         e_i, e_j = ortho_vectors[i]
         planar_sphere = planar_map(sphere_vectors[hemisphere_mask], e_i, e_j)
         disk_mask = AD.MultiPointPoly_(planar_sphere, disk_projection, convex_idx, hulls_extrema=hull_extrema)
-        hemisphere_mask[hemisphere_mask] = disk_mask & hemisphere_mask[hemisphere_mask]
+        hemisphere_mask[hemisphere_mask] &= disk_mask
         out[i] = calc_surface_flux(inner_prod[i], temps, sin_thetas, const, hemisphere_mask)
+
+@nb.njit('(f8[:,:], f8[:,:], f8[:,:], f8[:,:],f8[:,:,:], f8[:], u2[:,:], f8[:], f8)')
+def calc_disk_flux(ortho_vectors, sphere_vectors, disk_projection, convex_idx, hull_extrema, inner_prod: np.float64, temps: np.uint16, sin_thetas: np.float64, const: np.float64):
+    '''
+    Calculates the flux from the sphere's surface, first filters to see if the points lie on the same hemisphere as the observer ray, then also checks if the points are blocked by the disk.
+    '''
+
+    hemisphere_mask = calc_hemisphere_points(inner_prod)
+    # print(hemisphere_mask[hemisphere_mask], 'first test')
+    e_i, e_j = ortho_vectors
+    planar_sphere = planar_map(sphere_vectors[hemisphere_mask], e_i, e_j)
+    # disk_mask = AD.MultiPointPoly_(planar_sphere, disk_projection, convex_idx, hulls_extrema=hull_extrema)
+    # print(disk_mask[~disk_mask], 'disk')
+    # return planar_sphere
+    disk_mask = AD.MultiPointPoly_(planar_sphere, disk_projection, convex_idx, hulls_extrema=hull_extrema)
+    # print(disk_mask[disk_mask], 'disk') 
+    hemisphere_mask[hemisphere_mask] &= ~disk_mask
+    # print(hemisphere_mask[hemisphere_mask], 'second test')
+    return calc_surface_flux(inner_prod, temps, sin_thetas, const, hemisphere_mask)
 
 class DiskFlux:
     params = ['obs_indexes', 'ortho_vectors', 'sphere_vectors', 'disk_projections', 'disk_hull_indexes', 'disk_extremas', 'inner_product', 'temperatures', 'sin_thetas', 'area_constant']
     
     @staticmethod
-    @nb.njit
+    # @nb.njit('u2[:,:], f8[:,:,:], f8[:,:], List(float64[:,:]), List(float64[:,:])), List(Array(f8[:,:,:])), f8[:,:], u2[:,:], f8[:], f8, f8[:]')
+    # @nb.njit(parallel = False)
     def calc_hemisphere_flux(obs_indexes, ortho_vectors, sphere_vectors, disk_projections, disk_hull_indexes, disk_extremas, inner_prod: np.float64, temps: np.uint16, sin_thetas: np.float64, const: np.float64, out: np.float64):
-        for row_idx in range(obs_indexes.shape[0]):
-            row_ID = np.arange(row_idx * obs_indexes.shape[-1], (row_idx + 1)*obs_indexes.shape[-1])
-            calc_disk_flux(ortho_vectors[row_ID], sphere_vectors, disk_projections[row_idx], disk_hull_indexes[row_idx], disk_extremas[row_idx], inner_prod[row_ID], temps, sin_thetas, const, out)
-
+        # row_ID = 0; row_idx = 0
+        # projection = disk_projections[row_idx]
+        # hull_idx = disk_hull_indexes[row_idx]
+        # extrema = disk_extremas[row_idx]
+        # return calc_disk_flux(ortho_vectors[row_ID], sphere_vectors, projection, hull_idx, extrema , inner_prod[row_ID], temps, sin_thetas, const)
+        for row_idx in nb.prange(obs_indexes.shape[0]):
+            projection = disk_projections[row_idx]
+            hull_idx = disk_hull_indexes[row_idx]
+            extrema = disk_extremas[row_idx]
+            for col_idx in range(obs_indexes.shape[1]):
+                row_ID = row_idx*obs_indexes.shape[1] + col_idx
+                out[row_ID] = calc_disk_flux(ortho_vectors[row_ID], sphere_vectors, projection, hull_idx, extrema , inner_prod[row_ID], temps, sin_thetas, const)
 
     
