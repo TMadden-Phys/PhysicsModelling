@@ -31,7 +31,7 @@ I am going to reference the neutron star rotation axis as NSRA through this sect
 
 The model can be saved by setting the parameter save model to True and specifying a file path and a filename for the save file. The Saving is to CSV format and uses Pandas to_csv(). The light curves are saved with row indexes corresponding to the observer angle and the flash start angle wrt the neutron star rotation axis. The columns correspond to timesteps in the simulation and each entry is a _flux_ (the flux is arbitrary units) measurement.
 
-![image](https://github.com/user-attachments/assets/739f66c3-f20c-40ec-9686-aed37bf0d48a)
+![image](ReadMeImages/image1.png)
 
 The next set of parameters setup the neutron star rotation frequency, the time resolution, the range of observer angles wrt the NSRA, the range of flash starting angles wrt the NSRA and the number of points to test within each of those ranges. Both the flash and the observer are set to start $\frac{\pi}{2}$ $radians$ from the NSRA. The range of observer angles and flash angles are in units of $\pi$ $radians$. The maximum observer range is $-0.5<= \theta <= 0.5$. The maximum flash range is $0<= \theta <= 1$.
 
