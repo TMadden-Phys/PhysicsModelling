@@ -27,19 +27,19 @@ The model is implemented in the form of a package that can be used in code to fi
 ## Parameters
 I am going to reference the neutron star rotation axis as NSRA through this section. The images are taken from an arbitrary example and can all be changed by the user.
 
-![image](https://github.com/user-attachments/assets/fc35cd37-c709-491a-9876-4ce1624ffc22)
+![image](ReadMeImages/image1.png)
 
 The model can be saved by setting the parameter save model to True and specifying a file path and a filename for the save file. The Saving is to CSV format and uses Pandas to_csv(). The light curves are saved with row indexes corresponding to the observer angle and the flash start angle wrt the neutron star rotation axis. The columns correspond to timesteps in the simulation and each entry is a _flux_ (the flux is arbitrary units) measurement.
 
-![image](ReadMeImages/image1.png)
+![image](ReadMeImages/image2.png)
 
 The next set of parameters setup the neutron star rotation frequency, the time resolution, the range of observer angles wrt the NSRA, the range of flash starting angles wrt the NSRA and the number of points to test within each of those ranges. Both the flash and the observer are set to start $\frac{\pi}{2}$ $radians$ from the NSRA. The range of observer angles and flash angles are in units of $\pi$ $radians$. The maximum observer range is $-0.5<= \theta <= 0.5$. The maximum flash range is $0<= \theta <= 1$.
 
-![image](https://github.com/user-attachments/assets/67176c90-4e17-4195-ac89-69c6e0cae6ab)
+![image](ReadMeImages/image3.png)
 
 These two parameters are to define the expected rise time and cool time of the burst. Most likely this would correspond to an average rise time of the light curves that are being investigated in the data.
 
-![image](https://github.com/user-attachments/assets/d210a154-edfd-4334-b6b3-414d647bff08)
+![image](ReadMeImages/image4.png)
 
 The last set of parameters are for including a pseudo accretion disk into the model. The current implementation of the accretion disk is a toroidal shape that has a cross section that looks like an ellipse and is a surface revloution about an axis. The model calculations allow the use of an arbitrary accretion disk shape. This would require the user to code their own implementation and use the code as a library to run simulations on their own defined disk. The accretion disk is set to block all photons that _hit_ the accretion disk.
 
