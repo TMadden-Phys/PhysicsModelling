@@ -41,7 +41,7 @@ These two parameters are to define the expected rise time and cool time of the b
 
 ![image](ReadMeImages/image4.png)
 
-The last set of parameters are for including a pseudo accretion disk into the model. The current implementation of the accretion disk is a toroidal shape that has a cross section that looks like an ellipse and is a surface revloution about an axis. The model calculations allow the use of an arbitrary accretion disk shape. This would require the user to code their own implementation and use the code as a library to run simulations on their own defined disk. The accretion disk is set to block all photons that _hit_ the accretion disk.
+The last set of parameters are for including a pseudo accretion disk into the model. The current implementation of the accretion disk is a toroidal shape that has a cross section that looks like an ellipse and is a surface revloution about an axis. The model calculations allow the use of an arbitrary accretion disk shape. This would require the user to code their own implementation and use the code as a library to run simulations on their own defined disk. The accretion disk is set to block all photons that _'hit'_ the accretion disk.
 
 - The first parameter sets whether to include an accretion disk in the model
 - The second defines the number of points that are used to create the disk cross section
@@ -49,7 +49,7 @@ The last set of parameters are for including a pseudo accretion disk into the mo
 - The fourth determines the tilt angle of the accretion disk this allows manipulation of off equator accretion disks if the user requires
 - The fifth defines the inner radius of the accretion disk in units of neutron star radius.
   - A setting of 1 is an accretion disk just touching the neutron star and values should be in the open range 1 < inner radius
-- The sixth defines the radius of the disk in units of neutron star radius and is the distance from the innr radius to the ourter radius of the disk
+- The sixth defines the radius of the disk in units of neutron star radius and is the distance from the inner radius to the outer radius of the disk
 - The seventh defines the maximum width of the cross section of the disk in units of neutron star radius*
 - The eighth defines where around the disk the observer is facing the disk*
 - the ninth is the number of regions used to approximate the concave hull of the accretion disk projections.
@@ -57,9 +57,9 @@ The last set of parameters are for including a pseudo accretion disk into the mo
 
 ## Experimental Features
 
-The model has a different flow type implemented which approximates an elliptic flow across the surface of the neutron star. This flow is fully functioning in terms of the claculations however due to the elliptical nature the rise time varies according to the ratio of the equitorial and polar velocities of the flow regime. Work is ongoing to align the rise time parameter in the run model jupyter notebook. Currently, this rise time will not give the correct time when the sphere is fully covered by the flow.
+The model has a different flow type implemented which approximates an elliptic flow across the surface of the neutron star. This flow is fully functioning in terms of the calculations however due to the elliptical nature the rise time varies according to the ratio of the equitorial and polar velocities of the flow regime. Work is ongoing to align the rise time parameter in the run model jupyter notebook. Currently, this rise time will not give the correct time when the sphere is fully covered by the flow.
 
-The elliptical spread approximation class can be found in the SpreadClasses.py file and is the RectSliceSpread class. A document containing a full mathematical explanation of the model will be uploaded soon.
+The elliptical spread approximation class can be found in the SpreadClasses.py file and is the RectSliceSpread class.
 
 ## Known bugs
 
